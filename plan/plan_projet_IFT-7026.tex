@@ -1,0 +1,309 @@
+%==============================================================================
+%  Plan de projet expérimental — IFT-7026
+%  Université Laval
+%
+%  Sujet : ordonnancement Linux assisté par apprentissage (candidate-based),
+%          de l'émulateur au noyau réel via sched_ext.
+%
+%  Compilation : pdflatex (2 passes) ou latexmk -pdf plan_projet_IFT-7026.tex
+%==============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+% --- Mise en forme des titres de section -------------------------------------
+\definecolor{ulgris}{RGB}{60,60,60}
+\titleformat{\section}{\large\bfseries\color{ulgris}}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.4em}{0.6em}
+
+% --- Métadonnées du document -------------------------------------------------
+\newcommand{\projetTitre}{Plan de projet expérimental — IFT-7026}
+\newcommand{\projetSujet}{Un ordonnanceur Linux appris par sélection de
+  candidats : de l'émulateur au noyau réel via \texttt{sched\_ext}}
+\newcommand{\projetSuperviseur}{Prof.\ Mohamed Aymen Saied}
+\newcommand{\projetDirecteur}{Prof.\ Pascal Tesson}
+\newcommand{\projetEtudiantUn}{Léopold Chappuis}
+\newcommand{\projetEtudiantDeux}{Alexandre Eberhardt}
+\newcommand{\projetSession}{Session d'automne 2026}
+\newcommand{\projetUniversite}{Université Laval}
+
+\begin{document}
+
+%==============================================================================
+%  En-tête
+%==============================================================================
+\begin{center}
+  {\LARGE\bfseries \projetTitre}\\[0.4em]
+  {\large \projetUniversite}
+\end{center}
+
+\vspace{0.8em}
+\noindent
+\begin{tabular}{@{}ll@{}}
+  \textbf{Étudiants}              & \projetEtudiantUn{}, \projetEtudiantDeux \\
+  \textbf{Superviseur}            & \projetSuperviseur \\
+  \textbf{Directeur de programme} & \projetDirecteur \\
+  \textbf{Session}                & \projetSession \\
+\end{tabular}
+
+\vspace{0.6em}
+\noindent\textbf{Sujet :} \projetSujet
+
+\vspace{0.4em}
+\hrule
+\vspace{1.2em}
+
+%==============================================================================
+\section{Objectif du projet}
+%==============================================================================
+Ce projet cherche à savoir si une politique d'ordonnancement \emph{apprise} peut
+faire mieux que simplement imiter les ordonnanceurs classiques du noyau Linux
+(CFS, EEVDF), tout en restant assez légère pour être \textbf{déployée dans un
+noyau réel}. Le critère principal est l'amélioration du temps de réponse. Le
+projet prolonge des résultats préliminaires obtenus dans le
+cadre du cours GLO-7030, où une formulation \emph{candidate-based} évaluée en
+boucle fermée a déjà montré un gain de l'ordre de \mbox{$-10{,}5\,\%$} sur le
+temps de réponse moyen face à CFS dans un émulateur.
+
+\medskip
+Les objectifs spécifiques sont :
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+  \item Renforcer la formulation \emph{candidate-based} en remplaçant le
+    \emph{teacher} heuristique par un \textbf{teacher quasi-optimal à lookahead}
+    (étiquetage obtenu en simulant plusieurs pas à l'avance dans l'émulateur), puis distillation
+    vers un modèle causal.
+  \item Réduire le \emph{covariate shift} entre états d'entraînement et états
+    auto-induits par un \textbf{réentraînement itératif de type DAgger}.
+  \item Caractériser le compromis \textbf{précision / latence d'inférence /
+    nombre de paramètres} par distillation (front de Pareto), la latence étant
+    le principal facteur limitant côté systèmes.
+  \item \textbf{Déployer} la politique distillée dans un noyau réel via
+    \texttt{sched\_ext} (ordonnanceur en espace utilisateur de type
+    \texttt{scx\_rustland}) et la comparer à EEVDF en boucle fermée sur des
+    charges réelles.
+\end{itemize}
+
+%==============================================================================
+\section{Résumé}
+%==============================================================================
+L'ordonnanceur du noyau Linux prend des milliers de décisions par seconde, qui
+déterminent latence, équité et utilisation du CPU. Ces décisions reposent sur des
+heuristiques affinées sur des décennies (CFS, puis EEVDF depuis Linux~6.6), qui
+n'optimisent pas explicitement des objectifs comme le temps de réponse. La
+question posée est de savoir si un modèle appris peut reconstruire, voire
+améliorer, ces décisions à partir de l'état d'exécution. L'application d'un
+modèle appris à la décision d'ordonnancement, et plus encore son déploiement
+dans un noyau réel, reste peu explorée dans la
+littérature : les rares travaux existants (\textit{KernelOracle}~[3],
+[1], [2], [4]) se limitent à la prédiction hors ligne, sans déploiement ni
+évaluation en boucle fermée dans un noyau réel.
+
+\medskip
+Le projet s'appuie sur une fondation existante (GLO-7030) comportant deux volets :
+(i) un pipeline d'imitation séquentielle de type LSTM sur traces
+\texttt{sched\_switch} réelles collectées avec \texttt{perf}, conservé ici comme
+\textbf{baseline} (\og imitation pure \fg{}, proche de KernelOracle) ; et (ii) une
+formulation \emph{candidate-based} apprenant à choisir une tâche parmi des
+candidats à partir d'un état d'ordonnancement riche, évaluée en boucle fermée
+dans un émulateur. C'est ce second volet qui constitue la contribution
+principale.
+
+\medskip
+Le projet corrige les limites de ces travaux préliminaires : un
+\emph{teacher} heuristique trop simple, un \emph{covariate shift} non traité, et une
+évaluation restreinte à l'émulateur. Il propose un \emph{teacher} quasi-optimal,
+un réentraînement DAgger, une analyse du compromis précision/latence par
+distillation, puis un \textbf{déploiement dans un noyau réel via
+\texttt{sched\_ext}}. L'accent est mis autant sur la \textbf{méthodologie
+d'évaluation} (protocole en boucle fermée, baselines EEVDF/CFS, métriques dont la
+latence de queue p99, tests statistiques multi-graines) et la
+\textbf{reproductibilité} du pipeline que sur l'apprentissage lui-même :
+il ne s'agit pas seulement d'entraîner un modèle, mais de mesurer
+précisément et de façon reproductible ce qu'il apporte. Les entraînements
+s'appuieront sur les ressources de calcul
+(serveur ICE, via le compte de recherche du superviseur) ; le déploiement
+\texttt{sched\_ext} ciblera une machine disposant d'un noyau Linux~6.12
+(\texttt{CONFIG\_SCHED\_CLASS\_EXT}) avec accès privilégié. Le résultat final
+visé est un rapport au format article, soumissible à un atelier de type
+\emph{ML for Systems} (repli : EuroMLSys, APSys).
+
+%==============================================================================
+\section{Contenu et travaux à effectuer}
+%==============================================================================
+Le projet est structuré en trois phases.
+
+\medskip
+\noindent\textbf{Phase 0 — Consolidation et protocole expérimental}
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+  \item Nettoyage et reproductibilité du code existant (pipeline, émulateur).
+  \item Unification du \emph{baseline} de comparaison sur EEVDF (cohérence avec
+    le noyau réel ; correction de l'écart CFS/EEVDF des travaux préliminaires).
+  \item Définition d'une suite de charges de travail, des métriques (temps de
+    réponse moyen et \textbf{latence de queue p99}, turnaround, commutations de
+    contexte, équité) et d'un protocole statistique (multi-graines,
+    significativité).
+  \item Revue de littérature et positionnement.
+\end{itemize}
+
+\noindent\textbf{Phase 1 — Contribution méthodologique (émulateur)}
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+  \item \emph{Teacher} quasi-optimal à lookahead et distillation vers un modèle
+    causal.
+  \item Réentraînement itératif DAgger sur les trajectoires auto-induites.
+  \item Front de Pareto précision / latence d'inférence / nombre de paramètres.
+  \item Évaluation en boucle fermée vs EEVDF et CFS, ablations de l'architecture
+    \emph{candidate-based}, généralisation à des charges non vues.
+\end{itemize}
+
+\noindent\textbf{Phase 2 — Déploiement noyau réel}
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+  \item Intégration d'un ordonnanceur \texttt{sched\_ext} en espace utilisateur
+    (type \texttt{scx\_rustland}) interrogeant le modèle distillé.
+  \item Mesures en boucle fermée sur charges réelles vs EEVDF ; analyse du budget
+    de latence d'inférence.
+  \item \emph{Repli} : si le déploiement \texttt{sched\_ext} s'avère bloquant,
+    bascule vers un ordonnanceur \og orientable \fg{} (politique unique
+    conditionnée par un vecteur de poids d'objectifs), évalué en émulateur.
+\end{itemize}
+
+\medskip
+\noindent Liste détaillée des travaux :
+\begin{enumerate}[leftmargin=1.6em,itemsep=3pt]
+  \item Effectuer la revue de littérature (imitation, prédiction séquentielle,
+    RL/imitation pour l'ordonnancement, \texttt{sched\_ext}) et positionner la
+    contribution.
+  \item Consolider le code et fixer le protocole expérimental (charges,
+    métriques dont p99, statistiques) ; aligner le \emph{baseline} sur EEVDF.
+  \item Concevoir le \emph{teacher} quasi-optimal à lookahead et le comparer au
+    \emph{teacher} heuristique des travaux préliminaires.
+  \item Entraîner par distillation et tracer le front de Pareto précision /
+    latence / paramètres ; intégrer le réentraînement DAgger.
+  \item Évaluer en boucle fermée dans l'émulateur (vs EEVDF/CFS), réaliser les
+    ablations et les tests de généralisation ; rédiger le rapport de mi-session.
+  \item Intégrer la politique distillée dans un ordonnanceur \texttt{sched\_ext}
+    et mesurer sur un noyau réel face à EEVDF ; analyser le budget de latence.
+  \item Rédiger le rapport final au format article et identifier les pistes de
+    recherche futures.
+\end{enumerate}
+
+\medskip
+\noindent\textbf{Faisabilité et portée.} La fondation déjà en place (code,
+émulateur et premiers résultats issus de GLO-7030) réduit le risque et concentre
+l'effort sur la contribution. Les phases~0 et~1, réalisables dans l'enveloppe de
+\mbox{5--6\,h/semaine} par personne sur la session, constituent le \textbf{livrable
+garanti} du projet. Le déploiement dans un noyau réel (phase~2) en est
+l'\textbf{objectif ambitieux} : en cas de blocage technique sur
+\texttt{sched\_ext}, le repli « orientable » décrit ci-dessus assure une
+contribution expérimentale complète et évaluable en émulateur.
+
+%==============================================================================
+\section{Modalités d'évaluation}
+%==============================================================================
+\noindent
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}Xr@{}}
+  \toprule
+  \textbf{Composante} & \textbf{Pondération} \\
+  \midrule
+  Présentation orale — état de l'art et positionnement & 15 \% \\
+  \addlinespace
+  Production expérimentale et reproductibilité (Phase 1 : code, émulateur, \emph{benchmark}) & 15 \% \\
+  \addlinespace
+  Rapport de mi-session (présenté à la présentation intermédiaire) & \textbf{35 \%} \\
+  \quad Description de la problématique et de la méthodologie & 10 \% \\
+  \quad Analyse quantitative (boucle fermée, ablations, Pareto) & 15 \% \\
+  \quad Analyse qualitative (analyse d'erreurs, limites) & 10 \% \\
+  \addlinespace
+  Rapport final (format article, soutenu à la présentation finale) & \textbf{35 \%} \\
+  \quad Nouveaux aspects étudiés depuis la mi-session & 10 \% \\
+  \quad Analyse quantitative (\texttt{sched\_ext} vs EEVDF, latence) & 15 \% \\
+  \quad Analyse qualitative & 10 \% \\
+  \midrule
+  \textbf{Total} & \textbf{100 \%} \\
+  \bottomrule
+\end{tabularx}
+
+\medskip
+\noindent\small Les présentations intermédiaire et finale ne sont pas pondérées
+séparément : elles constituent la soutenance orale des rapports correspondants
+et sont évaluées au sein de ceux-ci. La présentation orale de l'état de l'art
+(début de session) est la seule présentation pondérée de façon autonome. Les
+présentations peuvent se tenir \textbf{en visioconférence}.
+
+%==============================================================================
+\section{Échéancier}
+%==============================================================================
+\noindent
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\linewidth}{@{}Xl@{}}
+  \toprule
+  \textbf{Étape} & \textbf{Date cible} \\
+  \midrule
+  Début du projet (Phase 0)                              & Début septembre 2026 \\
+  Présentation orale — état de l'art et positionnement   & Fin septembre 2026 \\
+  Livrable 1 — résultats Phase 1 + rapport de mi-session & Fin octobre 2026 \\
+  Présentation intermédiaire (soutenance du rapport de mi-session) & Mi-novembre 2026 \\
+  Livrable 2 — déploiement \texttt{sched\_ext} (Phase 2) & Début décembre 2026 \\
+  Rapport final (format article) + présentation finale   & Mi-décembre 2026 \\
+  \bottomrule
+\end{tabularx}
+
+%==============================================================================
+\section{Livrables}
+%==============================================================================
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+  \item Code reproductible : pipeline d'apprentissage, émulateur, intégration
+    \texttt{sched\_ext}.
+  \item Suite de charges de travail / \emph{benchmark} et jeux de décisions
+    candidates utilisés pour les expérimentations.
+  \item Rapport de mi-session et rapport final.
+  \item Présentations : présentation orale (état de l'art), présentation
+    intermédiaire et présentation finale.
+  \item Draft d'article soumissible (cible : \emph{ML for Systems} ;
+    repli : EuroMLSys, APSys).
+\end{itemize}
+
+%==============================================================================
+\section{Références (préliminaires)}
+%==============================================================================
+\begin{enumerate}[leftmargin=2em,itemsep=4pt,label={[\arabic*]}]
+  \item Jingde Chen, Subho S.\ Banerjee, Zbigniew T.\ Kalbarczyk et Ravishankar K.\ Iyer.
+    \emph{Machine learning for load balancing in the linux kernel}. Dans
+    \textit{Proceedings of the 11th ACM SIGOPS Asia-Pacific Workshop on Systems},
+    APSys~'20, p.~67--74, New York, NY, USA, 2020. Association for Computing Machinery.
+  \item Anusha G.~H., Minal K., B.~P.\ Varsha, Geethishree Mishra, Meghana G.~K.\ et
+    Madhusudhan K.~N. \emph{ML engine for linux scheduler}. \textit{Quest Journals,
+    Journal of Software Engineering and Simulation}, vol.~9, n\textsuperscript{o}~7,
+    p.~20--29, 2023.
+  \item Sampanna Yashwant Kahu. \emph{KernelOracle: Predicting the linux scheduler's
+    next move with deep learning}, 2025.
+  \item Atul Negi et P.\ Kishore Kumar. \emph{Applying machine learning techniques to
+    improve linux process scheduling}. Dans \textit{TENCON 2005 -- 2005 IEEE Region 10
+    Conference}, p.~1--6, 2005.
+  \item Stéphane Ross, Geoffrey J.\ Gordon et Drew Bagnell. \emph{A reduction of
+    imitation learning and structured prediction to no-regret online learning}. Dans
+    \textit{Proceedings of the Fourteenth International Conference on Artificial
+    Intelligence and Statistics (AISTATS)}, vol.~15 de \textit{Proceedings of Machine
+    Learning Research}, p.~627--635, 2011.
+  \item Vasuki Shankar. \emph{Machine learning for linux kernel optimization: Current
+    trends and future directions}. \textit{International Journal of Computer Sciences
+    and Engineering}, vol.~13, p.~56--64, 03~2025.
+  \item Ion Stoica et Hussein Abdel-Wahab. \emph{Earliest Eligible Virtual Deadline
+    First: A flexible and accurate mechanism for proportional share resource
+    allocation}. Rapport technique TR-95-22, Old Dominion University, 1995.
+  \item \emph{Sched\_ext: BPF extensible scheduler class}. Documentation du noyau
+    Linux. \url{https://docs.kernel.org/scheduler/sched-ext.html} (consulté en 2026).
+\end{enumerate}
+
+\end{document}
