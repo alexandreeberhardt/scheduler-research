@@ -70,28 +70,44 @@
 Ce projet cherche à savoir si une politique d'ordonnancement \emph{apprise} peut
 faire mieux que simplement imiter les ordonnanceurs classiques du noyau Linux
 (CFS, EEVDF), tout en restant assez légère pour être \textbf{déployée dans un
-noyau réel}. Le critère principal est l'amélioration du temps de réponse. Le
+noyau réel}. Le critère principal est l'amélioration du temps de réponse,
+\emph{sous contraintes} : sans famine et sans dégradation notable des autres
+métriques (équité, commutations de contexte, turnaround) — optimiser le temps
+de réponse seul serait trivial au prix de la famine des tâches longues. Le
 projet prolonge des résultats préliminaires obtenus dans le
 cadre du cours GLO-7030, où une formulation \emph{candidate-based} évaluée en
-boucle fermée a déjà montré un gain de l'ordre de \mbox{$-10{,}5\,\%$} sur le
+boucle fermée a déjà montré une réduction d'environ \mbox{$10{,}5\,\%$} du
 temps de réponse moyen face à CFS dans un émulateur.
 
 \medskip
 Les objectifs spécifiques sont :
 \begin{itemize}[leftmargin=1.5em,itemsep=3pt]
-  \item Renforcer la formulation \emph{candidate-based} en remplaçant le
-    \emph{teacher} heuristique par un \textbf{teacher quasi-optimal à lookahead}
-    (étiquetage obtenu en simulant plusieurs pas à l'avance dans l'émulateur), puis distillation
-    vers un modèle causal.
-  \item Réduire le \emph{covariate shift} entre états d'entraînement et états
-    auto-induits par un \textbf{réentraînement itératif de type DAgger}.
+  \item Améliorer la qualité du signal d'apprentissage : aujourd'hui le modèle
+    apprend à imiter un \emph{teacher} fait de règles fixes. Il sera remplacé
+    par un \textbf{teacher quasi-optimal} qui, pour chaque décision, essaie
+    plusieurs choix dans l'émulateur et regarde quelques pas en avant pour
+    identifier le meilleur. Le modèle apprend ensuite à reproduire ces bonnes
+    décisions sans avoir accès au futur (il n'utilise que l'information
+    disponible au moment de décider).
+  \item Corriger le décalage entre entraînement et utilisation
+    (\emph{covariate shift}) : le modèle est entraîné sur des situations
+    produites par CFS, mais une fois aux commandes il crée ses propres
+    situations, jamais vues à l'entraînement. Le remède (\textbf{réentraînement
+    itératif de type DAgger}) consiste à laisser le modèle ordonnancer, à faire
+    étiqueter par le \emph{teacher} les situations ainsi créées, puis à
+    réentraîner sur ces nouvelles données.
   \item Caractériser le compromis \textbf{précision / latence d'inférence /
     nombre de paramètres} par distillation (front de Pareto), la latence étant
     le principal facteur limitant côté systèmes.
-  \item \textbf{Déployer} la politique distillée dans un noyau réel via
-    \texttt{sched\_ext} (ordonnanceur en espace utilisateur de type
-    \texttt{scx\_rustland}) et la comparer à EEVDF en boucle fermée sur des
-    charges réelles.
+  \item \textbf{Déployer} le modèle dans un vrai noyau Linux, pas seulement
+    dans l'émulateur. Le mécanisme \texttt{sched\_ext} (Linux $\geq$ 6.12)
+    permet de brancher un ordonnanceur personnalisé sans recompiler le noyau :
+    sur le modèle de \texttt{scx\_rustland}, un petit composant dans le noyau
+    transmet chaque décision à un programme en espace utilisateur, qui
+    interrogera ici le modèle distillé pour choisir la prochaine tâche. On
+    mesurera alors, sur de vraies charges (p.~ex.\ compilation, serveur sous
+    requêtes), si la machine répond mieux qu'avec l'ordonnanceur par défaut
+    (EEVDF), avec les mêmes métriques que dans l'émulateur.
 \end{itemize}
 
 %==============================================================================
@@ -105,22 +121,23 @@ question posée est de savoir si un modèle appris peut reconstruire, voire
 améliorer, ces décisions à partir de l'état d'exécution. L'application d'un
 modèle appris à la décision d'ordonnancement, et plus encore son déploiement
 dans un noyau réel, reste peu explorée dans la
-littérature : les rares travaux existants (\textit{KernelOracle}~[3],
-[1], [2], [4]) se limitent à la prédiction hors ligne, sans déploiement ni
+littérature : les travaux existants (dont \textit{KernelOracle}~[3])
+[1--4] se limitent à la prédiction hors ligne, sans déploiement ni
 évaluation en boucle fermée dans un noyau réel.
 
 \medskip
-Le projet s'appuie sur une fondation existante (GLO-7030) comportant deux volets :
-(i) un pipeline d'imitation séquentielle de type LSTM sur traces
+Le projet s'appuie sur une base existante (GLO-7030) comportant deux parties :
+(i) un pipeline d'imitation séquentielle (modèle récurrent LSTM) sur traces
 \texttt{sched\_switch} réelles collectées avec \texttt{perf}, conservé ici comme
 \textbf{baseline} (\og imitation pure \fg{}, proche de KernelOracle) ; et (ii) une
 formulation \emph{candidate-based} apprenant à choisir une tâche parmi des
-candidats à partir d'un état d'ordonnancement riche, évaluée en boucle fermée
-dans un émulateur. C'est ce second volet qui constitue la contribution
+candidats à partir d'un état d'ordonnancement riche, via un encodeur à
+attention sur l'ensemble des tâches et l'historique de décisions, évaluée en
+boucle fermée dans un émulateur. C'est cette seconde partie qui constitue la contribution
 principale.
 
 \medskip
-Le projet corrige les limites de ces travaux préliminaires : un
+Le projet proposé vise à corriger les limites de ces travaux préliminaires : un
 \emph{teacher} heuristique trop simple, un \emph{covariate shift} non traité, et une
 évaluation restreinte à l'émulateur. Il propose un \emph{teacher} quasi-optimal,
 un réentraînement DAgger, une analyse du compromis précision/latence par

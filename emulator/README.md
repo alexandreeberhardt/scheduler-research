@@ -20,7 +20,7 @@ python3 emulator/sched_em.py emulator/tasks/demo.tasks --compare --seed 3
 
 ## Générer un dataset pour le modèle
 
-Le chemin recommandé passe par `LSTM/scripts/build_candidate_dataset.py`.
+Le chemin recommandé passe par `model/scripts/build_candidate_dataset.py`.
 
 Pour créer beaucoup de workloads variés avant ça:
 
@@ -34,7 +34,7 @@ python3 emulator/generate_workloads.py \
 Exemple:
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/build_candidate_dataset.py \
     --taskfiles ../emulator/tasks/demo.tasks ../emulator/tasks/all_in_one.tasks \
     --output-dir artifacts/candidate_dataset \
@@ -60,12 +60,12 @@ Puis il choisit directement un candidat.
 Le modèle prédit, mais `CFS` garde la main. L'émulateur mesure ce qu'aurait changé une divergence.
 
 ```bash
-uv run --project LSTM python emulator/sched_em.py emulator/tasks/demo.tasks \
+uv run --project model python emulator/sched_em.py emulator/tasks/demo.tasks \
     -p CFS \
     -d 220 \
     --seed 3 \
     --model-mode shadow \
-    --model-run-dir LSTM/artifacts/training_runs/candidate_baseline \
+    --model-run-dir model/artifacts/training_runs/candidate_baseline \
     --stats-json emulator/artifacts/benchmarks/demo_shadow.json
 ```
 
@@ -74,12 +74,12 @@ uv run --project LSTM python emulator/sched_em.py emulator/tasks/demo.tasks \
 Le modèle choisit vraiment la prochaine tâche parmi les candidats. Si la base de comparaison est `CFS`, l'émulateur exporte aussi les deltas contre `CFS`.
 
 ```bash
-uv run --project LSTM python emulator/sched_em.py emulator/tasks/demo.tasks \
+uv run --project model python emulator/sched_em.py emulator/tasks/demo.tasks \
     -p CFS \
     -d 220 \
     --seed 3 \
     --model-mode closed-loop \
-    --model-run-dir LSTM/artifacts/training_runs/candidate_baseline \
+    --model-run-dir model/artifacts/training_runs/candidate_baseline \
     --stats-json emulator/artifacts/benchmarks/demo_closed_loop.json
 ```
 

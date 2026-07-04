@@ -5,7 +5,7 @@ Compare CFS / heuristic / model on real scheduling metrics.
 Usage:
     python compare_policies.py \
         --taskfiles emulator/tasks/demo.tasks emulator/tasks/generated/workload_000.tasks \
-        --model-run-dir LSTM/artifacts/training_runs/candidate_large_heuristic \
+        --model-run-dir model/artifacts/training_runs/candidate_large_heuristic \
         --seeds 0 1 2 3 4 \
         --duration 260
 """

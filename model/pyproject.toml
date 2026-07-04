@@ -1,5 +1,5 @@
 [project]
-name = "lstm-scheduler"
+name = "scheduler-model"
 version = "0.1.0"
 description = "Modèle candidat pour la sélection de la prochaine tâche ordonnancée."
 readme = "README.md"

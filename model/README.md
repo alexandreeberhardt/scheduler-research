@@ -15,7 +15,7 @@ all_task_features  -> task_encoder -> set-attn ---------/
 global_features    -> global_encoder -------------------/
 ```
 
-Le dossier garde son nom historique `LSTM/`, mais le modèle entraîné est maintenant un scoreur de candidats.
+Le dossier s'appelait historiquement `LSTM/` ; le modèle entraîné est un scoreur de candidats à base d'attention (les artefacts et scripts nommés `lstm_*` concernent l'ancien baseline récurrent).
 
 ## Architecture détaillée
 
@@ -118,7 +118,7 @@ Température teacher **τ = 0.7** (durcit légèrement la distribution, évite u
 Top-k accuracy sur le split test : le modèle prédit-il le même candidat que le teacher ?
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/evaluate_baseline.py \
     --dataset-dir artifacts/candidate_dataset_large_heuristic \
     --checkpoint artifacts/training_runs/candidate_large_heuristic/best_model.pt \
@@ -134,7 +134,7 @@ Résultat obtenu (teacher heuristique + loss listwise) : **top-1 = 91.6%, top-3 
 Le modèle prend les vraies décisions dans l'émulateur, on compare les métriques finales contre CFS pur sur les mêmes workloads et seeds :
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/compare_policies.py \
     --taskfiles ../emulator/tasks/demo.tasks ../emulator/tasks/generated/workload_000.tasks \
     --model-run-dir artifacts/training_runs/candidate_large_heuristic \
@@ -200,7 +200,7 @@ artifacts/
 Depuis la racine du repo:
 
 ```bash
-uv sync --project LSTM
+uv sync --project model
 ```
 
 ## 1. Construire le dataset
@@ -223,7 +223,7 @@ python3 emulator/generate_workloads.py \
 Exemple rapide:
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/build_candidate_dataset.py \
     --taskfiles ../emulator/tasks/demo.tasks ../emulator/tasks/all_in_one.tasks \
     --output-dir artifacts/candidate_dataset \
@@ -237,7 +237,7 @@ uv run python scripts/build_candidate_dataset.py \
 Exemple plus ambitieux:
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/build_candidate_dataset.py \
     --taskfiles ../emulator/tasks/demo.tasks ../emulator/tasks/all_in_one.tasks \
     --output-dir artifacts/candidate_dataset_oracle \
@@ -253,7 +253,7 @@ Le mode `oracle` est volontairement plus coûteux, parce qu'il rejoue plusieurs 
 ## 2. Entraîner le modèle
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/train_baseline.py \
     --dataset-dir artifacts/candidate_dataset_large_heuristic \
     --output-dir artifacts/training_runs/candidate_large_heuristic \
@@ -292,7 +292,7 @@ Le curriculum recommandé est:
 2. fine-tuner le checkpoint obtenu sur `teacher=oracle`.
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/finetune_oracle.py \
     --dataset-dir artifacts/candidate_dataset_oracle \
     --init-checkpoint artifacts/training_runs/candidate_baseline/best_model.pt \
@@ -305,7 +305,7 @@ uv run python scripts/finetune_oracle.py \
 ## 3. Évaluer le modèle
 
 ```bash
-cd LSTM
+cd model
 uv run python scripts/evaluate_baseline.py \
     --dataset-dir artifacts/candidate_dataset \
     --checkpoint artifacts/training_runs/candidate_baseline/best_model.pt \
@@ -380,7 +380,7 @@ Le modèle entraîné peut ensuite être comparé à `CFS` directement dans l'é
 Mode `shadow`:
 
 ```bash
-uv run --project LSTM python ../emulator/sched_em.py ../emulator/tasks/demo.tasks \
+uv run --project model python ../emulator/sched_em.py ../emulator/tasks/demo.tasks \
     -p CFS \
     -d 220 \
     --seed 3 \
@@ -392,7 +392,7 @@ uv run --project LSTM python ../emulator/sched_em.py ../emulator/tasks/demo.task
 Mode `closed-loop`:
 
 ```bash
-uv run --project LSTM python ../emulator/sched_em.py ../emulator/tasks/demo.tasks \
+uv run --project model python ../emulator/sched_em.py ../emulator/tasks/demo.tasks \
     -p CFS \
     -d 220 \
     --seed 3 \

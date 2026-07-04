@@ -19,11 +19,11 @@ class SchedulerModelPolicy:
             import torch
         except ImportError as exc:
             raise RuntimeError(
-                "Torch is required for model modes. Run the emulator from the LSTM environment."
+                "Torch is required for model modes. Run the emulator from the model environment."
             ) from exc
 
         repo_root = Path(__file__).resolve().parents[1]
-        scripts_dir = repo_root / "LSTM" / "scripts"
+        scripts_dir = repo_root / "model" / "scripts"
         if str(scripts_dir) not in sys.path:
             sys.path.insert(0, str(scripts_dir))
 
@@ -31,7 +31,7 @@ class SchedulerModelPolicy:
             from common import normalize_checkpoint_state_dict
             from model import CandidateSchedulerModel
         except ImportError as exc:
-            raise RuntimeError("Unable to import LSTM/scripts/model.py") from exc
+            raise RuntimeError("Unable to import model/scripts/model.py") from exc
 
         run_path = Path(run_dir).resolve()
         checkpoint_path = run_path / "best_model.pt"

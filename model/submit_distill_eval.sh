@@ -11,7 +11,7 @@ set -euo pipefail
 
 module load enseignement/GLO-4030
 
-cd /project/ens-h26-glo4030-projet-eq02/LSTM
+cd /project/ens-h26-glo4030-projet-eq02/model
 # source env_eevdf/bin/activate
 
 export PYTHONNOUSERSITE=1
