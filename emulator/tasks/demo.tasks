@@ -1,0 +1,20 @@
+# Format: pid  arrival_ms  burst_ms  nice  io_ratio  policy  rt_prio  deadline_ms  name
+#
+# policy:   CFS(0) FIFO(1) RR(2) BATCH(3) IDLE(5) NN
+# nice:     -20..19  (CFS/BATCH only, ignored for RT)
+# rt_prio:  1..99    (FIFO/RR only)
+# io_ratio: 0.0..1.0 (fraction of time doing I/O — triggers random sleep events)
+# deadline: 0 = no deadline; N = must finish within N ms of arrival
+#
+# pid  arr   burst  nice  io     policy  rtp  dl    name
+1      0     80     0     0.30   CFS     0    0     bash
+2      5     400    0     0.05   CFS     0    0     gcc_build
+3      0     600    15    0.10   CFS     0    0     backup
+4      10    60     -5    0.40   CFS     0    200   gstreamer
+5      20    150    0     0.25   CFS     0    0     postgres
+6      2     30     0     0.00   FIFO    80   0     kworker
+7      30    200    -10   0.15   CFS     0    0     Xorg
+8      50    100    5     0.50   CFS     0    0     firefox
+9      15    250    0     0.20   CFS     0    0     python3
+10     60    80     0     0.00   RR      50   0     watchdog
+

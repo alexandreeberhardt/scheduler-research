@@ -1,0 +1,12 @@
+[project]
+name = "lstm-scheduler"
+version = "0.1.0"
+description = "Modèle candidat pour la sélection de la prochaine tâche ordonnancée."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "torch>=2.2",
+    "wandb>=0.23",
+]
