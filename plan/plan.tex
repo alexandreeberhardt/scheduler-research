@@ -1,0 +1,189 @@
+%==============================================================================
+%  Plan de projet expérimental — IFT-7026
+%  Université Laval
+%
+%  Sujet : ordonnancement Linux assisté par apprentissage (candidate-based),
+%          de l'émulateur au noyau réel via sched_ext.
+%
+%  Compilation : pdflatex (2 passes) ou latexmk -pdf plan_projet_IFT-7026.tex
+%==============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+% --- Mise en forme des titres de section -------------------------------------
+\definecolor{ulgris}{RGB}{60,60,60}
+\titleformat{\section}{\large\bfseries\color{ulgris}}{\thesection.}{0.5em}{}
+\titlespacing*{\section}{0pt}{1.4em}{0.6em}
+
+% --- Métadonnées du document -------------------------------------------------
+\newcommand{\projetTitre}{Plan de projet expérimental — IFT-7026}
+\newcommand{\projetSujet}{Un ordonnanceur Linux utilisant un modèle d'IA avec une approche candidate-based au lieu d'algorithmes avec des heuristiques dans l'ordonnanceur classique (CFS et EEVDF). }
+\newcommand{\projetSuperviseur}{Prof.\ Mohamed Aymen Saied}
+\newcommand{\projetDirecteur}{Prof.\ Pascal Tesson}
+\newcommand{\projetEtudiantUn}{Léopold Chappuis}
+\newcommand{\projetEtudiantDeux}{Alexandre Eberhardt}
+\newcommand{\projetSession}{Session d'automne 2026}
+\newcommand{\projetUniversite}{Université Laval}
+
+\begin{document}
+
+%==============================================================================
+%  En-tête
+%==============================================================================
+\begin{center}
+  {\LARGE\bfseries \projetTitre}\\[0.4em]
+  {\large \projetUniversite}
+\end{center}
+
+\vspace{0.8em}
+\noindent
+\begin{tabular}{@{}ll@{}}
+  \textbf{Étudiants}              & \projetEtudiantUn{}, \projetEtudiantDeux \\
+  \textbf{Superviseur}            & \projetSuperviseur \\
+  \textbf{Directeur de programme} & \projetDirecteur \\
+  \textbf{Session}                & \projetSession \\
+\end{tabular}
+
+\vspace{0.6em}
+\noindent\textbf{Sujet :} \projetSujet
+
+\vspace{0.4em}
+\hrule
+\vspace{1.2em}
+
+%==============================================================================
+\section{Objectif du projet}
+%==============================================================================
+L'objectif du projet est d'étudier comment un modèle d'IA pourrait remplacer les algorithmes utilisés par l'ordonnanceur Linux. Il faut se demander quel type de modèle est pertinent, comment l'interfacer avec le noyau Linux, puis étudier tous les compromis impliquant les performances (la taille du modèle, la précision, la latence, le type d'entrainement...), pour explorer les perspectives.
+L'objectif final est de proposer un draft d'article, pour le soumettre aux workshops de début d'année, afin de le faire publier dans une revue pertinente.
+
+
+%==============================================================================
+\section{Résumé}
+%==============================================================================
+Dans le cours GLO-7030, nous avons réalisé un projet consistant à imiter l'ordonnanceur Linux avec un modèle d'IA, nous avons obtenu des résultats intéressants (une précision de 73,22\% sur le premier choix d'ordonnancement et une précision de 96,05\% sur le top 3 des choix.). Nous souhaitons pousser plus loin ce projet, en étudiant en détail chaque possibilité, pour étudier l'influence de chaque paramètre, avec une méthodologie scientifique et reproductible, pouvant mener à un article scientifique.
+
+
+Nous pensons que c'est intéressant et que cela présente un apport à l'état de l'art de la recherche, car cela est au croisement de l'IA, à travers le modèle de deep learning utilisé, et de l'informatique bas niveau, car nous traitons de l'ordonnanceur du noyau Linux.
+
+%==============================================================================
+\section{Contenu et travaux à effectuer}
+%==============================================================================
+Le projet serait structuré en trois phases.
+
+\medskip
+\noindent\textbf{Phase 0 : Consolidation du travail déjà effectué et définition du protocole expérimental}
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+    \item Nettoyer le code existant et le simplifier pour permettre de le réutiliser de façon propre.
+    \item Définition de l'algorithme comparé et utilisé en baseline (CFS/EEVDF).
+    \item Mise en place de métriques claires, mesurables et reproductibles à utiliser dans la suite de notre travail.
+    \item Définition des données à utiliser, pour l'entrainement et l'évaluation, pour des résultats objectifs et représentatifs des performances réelles.
+    \item Revue de littérature et positionnement (restriction du sujet ou séparation en plusieurs sujets selon les perspectives).
+\end{itemize}
+
+\noindent\textbf{Phase 1 : Contribution méthodologique}
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+
+    \item Entrainement du modèle choisi avec les données choisies dans la phase 0.
+    \item Évaluation en boucle fermée et comparaison avec la baseline.
+    \item Amélioration itérative du modèle et de l'entrainement pour obtenir de meilleures performances.
+    \item Expérimentation de méthodes pour obtenir des modèles plus légers, afin de réduire le temps d'inférence, et comparaison des performances (distillation, teacher-student...)
+\end{itemize}
+
+\noindent\textbf{Phase 2 : Déploiement noyau réel}
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+
+    \item Interfacement du modèle appris et choisi, en prenant en compte le temps d'inférence, avec un véritable noyau Linux, remplaçant l'ordonnanceur présent.
+    \item Observer l'impact de la latence (lié à l'inférence) par rapport au temps de l'ordonnancement.
+    \item Si possible, comparer les performances du noyau, avec le modèle ou l'ordonnanceur classique, pour une exacte même suite de tâches.
+\end{itemize}
+
+
+%==============================================================================
+\section{Modalités d'évaluation}
+%==============================================================================
+\begin{tabularx}{\linewidth}{@{}Xr@{}}
+    \toprule
+    \textbf{Critère} & \textbf{Pondération} \\
+    \midrule
+    Présentation intermédiaire à la moitié de la session, pour présenter l'avancement et les perspectives pour la suite, avec le plan de l'article (peut être fait en visio). & 30\% \\
+    \addlinespace
+    Présentation finale à la fin de la session, pour présenter les résultats finaux et le draft d'article réalisé. (peut être fait en visio). & 30\% \\
+    \addlinespace
+    Le draft final, son apport à l'état de l'art et son taux de réponse aux attentes de ce projet. & 30\% \\
+    \addlinespace
+    La méthodologie complète et la reproductibilité des résultats & 10\% \\
+    \bottomrule
+\end{tabularx}
+
+%==============================================================================
+\section{Échéancier}
+%==============================================================================
+
+\begin{tabularx}{\linewidth}{@{}X>{\raggedright\arraybackslash}p{0.42\linewidth}@{}}
+    \toprule
+    \textbf{Jalon} & \textbf{Échéance} \\
+    \midrule
+    Présentation intermédiaire & fin octobre, (avant le 23 octobre, avant la semaine de lecture). \\
+    \addlinespace
+    Présentation finale & mi décembre (avant le 11 décembre, fin de la session) \\
+    \addlinespace
+    Le draft final, son apport à l'état de l'art et son taux de réponse aux attentes de ce projet. (30\%) & avant le 1\textsuperscript{er} janvier \\
+    \addlinespace
+    La méthodologie complète & avant le 1\textsuperscript{er} janvier \\
+    \bottomrule
+\end{tabularx}
+%==============================================================================
+\section{Livrables}
+%==============================================================================
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+    \item Le draft de l'article, finalisé et complet, relu par un spécialiste.
+    \item La méthodologie complète
+    \item Code propre complet permettant de reproduire tous les résultats et l'entrainement.
+
+\end{itemize}
+%==============================================================================
+\section{Références (préliminaires)}
+%==============================================================================
+\begin{enumerate}[leftmargin=2em,itemsep=4pt,label={[\arabic*]}]
+  \item Jingde Chen, Subho S.\ Banerjee, Zbigniew T.\ Kalbarczyk et Ravishankar K.\ Iyer.
+    \emph{Machine learning for load balancing in the linux kernel}. Dans
+    \textit{Proceedings of the 11th ACM SIGOPS Asia-Pacific Workshop on Systems},
+    APSys~'20, p.~67--74, New York, NY, USA, 2020. Association for Computing Machinery.
+  \item Anusha G.~H., Minal K., B.~P.\ Varsha, Geethishree Mishra, Meghana G.~K.\ et
+    Madhusudhan K.~N. \emph{ML engine for linux scheduler}. \textit{Quest Journals,
+    Journal of Software Engineering and Simulation}, vol.~9, n\textsuperscript{o}~7,
+    p.~20--29, 2023.
+  \item Sampanna Yashwant Kahu. \emph{KernelOracle: Predicting the linux scheduler's
+    next move with deep learning}, 2025.
+  \item Atul Negi et P.\ Kishore Kumar. \emph{Applying machine learning techniques to
+    improve linux process scheduling}. Dans \textit{TENCON 2005 -- 2005 IEEE Region 10
+    Conference}, p.~1--6, 2005.
+  \item Stéphane Ross, Geoffrey J.\ Gordon et Drew Bagnell. \emph{A reduction of
+    imitation learning and structured prediction to no-regret online learning}. Dans
+    \textit{Proceedings of the Fourteenth International Conference on Artificial
+    Intelligence and Statistics (AISTATS)}, vol.~15 de \textit{Proceedings of Machine
+    Learning Research}, p.~627--635, 2011.
+  \item Vasuki Shankar. \emph{Machine learning for linux kernel optimization: Current
+    trends and future directions}. \textit{International Journal of Computer Sciences
+    and Engineering}, vol.~13, p.~56--64, 03~2025.
+  \item Ion Stoica et Hussein Abdel-Wahab. \emph{Earliest Eligible Virtual Deadline
+    First: A flexible and accurate mechanism for proportional share resource
+    allocation}. Rapport technique TR-95-22, Old Dominion University, 1995.
+  \item \emph{Sched\_ext: BPF extensible scheduler class}. Documentation du noyau
+    Linux. \url{https://docs.kernel.org/scheduler/sched-ext.html}.
+\end{enumerate}
+
+\end{document}
